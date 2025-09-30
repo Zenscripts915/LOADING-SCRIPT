@@ -1,0 +1,153 @@
+-- LoadingScreen.lua (LocalScript)
+-- Place in StarterPlayerScripts or PlayerGui for testing in Studio
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Remove any existing GUI with same name to avoid duplicates
+local existing = playerGui:FindFirstChild("ZenLoadingScreen")
+if existing then existing:Destroy() end
+
+-- Root ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ZenLoadingScreen"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = playerGui
+
+-- Background (black, with subtle diagonal effect could be added via ImageLabel - keep simple)
+local bg = Instance.new("Frame")
+bg.Name = "Background"
+bg.AnchorPoint = Vector2.new(0.5, 0.5)
+bg.Position = UDim2.new(0.5, 0, 0.5, 0)
+bg.Size = UDim2.new(1, 0, 1, 0)
+bg.BackgroundColor3 = Color3.fromRGB(8,8,8)
+bg.BorderSizePixel = 0
+bg.Parent = screenGui
+
+-- Big Title: Zen Script
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.AnchorPoint = Vector2.new(0.5, 0.45)
+title.Position = UDim2.new(0.5, 0, 0.35, 0)
+title.Size = UDim2.new(0.7, 0, 0.2, 0)
+title.BackgroundTransparency = 1
+title.Text = "Zen Script"
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBlack
+title.TextStrokeTransparency = 0.8
+title.Parent = bg
+
+-- Progress bar container (dark grey)
+local barContainer = Instance.new("Frame")
+barContainer.Name = "BarContainer"
+barContainer.AnchorPoint = Vector2.new(0.5, 0)
+barContainer.Position = UDim2.new(0.5, 0, 0.55, 0)
+barContainer.Size = UDim2.new(0.6, 0, 0.06, 0)
+barContainer.BackgroundColor3 = Color3.fromRGB(70,70,70)
+barContainer.BorderSizePixel = 0
+barContainer.Parent = bg
+barContainer.ClipsDescendants = true
+barContainer.Rotation = 0
+barContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+
+-- Blue fill (starts at 0 width, will tween to 99%)
+local fill = Instance.new("Frame")
+fill.Name = "Fill"
+fill.AnchorPoint = Vector2.new(0, 0.5)
+fill.Position = UDim2.new(0, 0, 0.5, 0)
+fill.Size = UDim2.new(0, 0, 0.9, 0) -- 90% of container height
+fill.BackgroundColor3 = Color3.fromRGB(29, 90, 255) -- bright blue
+fill.BorderSizePixel = 0
+fill.Parent = barContainer
+fill.LayoutOrder = 1
+
+-- Small left accent (thin vertical blue bar like in screenshot)
+local leftAccent = Instance.new("Frame")
+leftAccent.Name = "LeftAccent"
+leftAccent.AnchorPoint = Vector2.new(0, 0.5)
+leftAccent.Position = UDim2.new(0, 0, 0.5, 0)
+leftAccent.Size = UDim2.new(0, 6, 0.75, 0) -- 6 pixels wide
+leftAccent.BackgroundColor3 = Color3.fromRGB(29, 90, 255)
+leftAccent.BorderSizePixel = 0
+leftAccent.Parent = barContainer
+
+-- Percent text centered on the bar
+local percentLabel = Instance.new("TextLabel")
+percentLabel.Name = "Percent"
+percentLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+percentLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+percentLabel.Size = UDim2.new(1, 0, 1, 0)
+percentLabel.BackgroundTransparency = 1
+percentLabel.Text = "0%"
+percentLabel.TextColor3 = Color3.fromRGB(255,255,255)
+percentLabel.TextScaled = true
+percentLabel.Font = Enum.Font.Gotham
+percentLabel.Parent = barContainer
+
+-- Subtitle below bar
+local subtitle = Instance.new("TextLabel")
+subtitle.Name = "Subtitle"
+subtitle.AnchorPoint = Vector2.new(0.5, 0)
+subtitle.Position = UDim2.new(0.5, 0, 0.65, 0)
+subtitle.Size = UDim2.new(0.6, 0, 0.07, 0)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "This may take up to 5 minutes to load."
+subtitle.TextColor3 = Color3.fromRGB(230,230,230)
+subtitle.TextScaled = true
+subtitle.Font = Enum.Font.Gotham
+subtitle.Parent = bg
+
+-- Make UI slightly responsive for smaller screens
+title.TextYAlignment = Enum.TextYAlignment.Center
+subtitle.TextYAlignment = Enum.TextYAlignment.Center
+percentLabel.TextYAlignment = Enum.TextYAlignment.Center
+
+-- Progress logic: Tween the fill's Size to 99% over 180 seconds and update percent text while tweening.
+local targetFraction = 0.99 -- 99%
+local duration = 180 -- seconds (3 minutes)
+
+-- Tween the Fill Size (X scale) from 0 to targetFraction
+local goal = {}
+goal.Size = UDim2.new(targetFraction, 0, fill.Size.Y.Scale, 0)
+
+local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+local tween = TweenService:Create(fill, tweenInfo, goal)
+
+-- Run a loop to update percent text each frame to match the fill width.
+local RunService = game:GetService("RunService")
+local startTime = tick()
+local updating = true
+
+tween:Play()
+
+local connection
+connection = RunService.Heartbeat:Connect(function()
+	if not updating then
+		connection:Disconnect()
+		return
+	end
+
+	local elapsed = tick() - startTime
+	local progress = math.clamp(elapsed / duration, 0, 1)
+	local percentNum = math.floor(progress * targetFraction * 100 + 0.5) -- rounded
+	if percentNum > 99 then percentNum = 99 end
+	percentLabel.Text = tostring(percentNum) .. "%"
+
+	-- When elapsed reaches duration, stop at 99%
+	if elapsed >= duration then
+		updating = false
+		percentLabel.Text = "99%"
+		-- Ensure fill size precisely set
+		fill.Size = UDim2.new(targetFraction, 0, fill.Size.Y.Scale, 0)
+	end
+end)
+
+-- Cleanup on leaving or respawn if desired
+player.CharacterRemoving:Connect(function()
+	screenGui:Destroy()
+end)
