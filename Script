@@ -1,153 +1,214 @@
--- LoadingScreen.lua (LocalScript)
--- Place in StarterPlayerScripts or PlayerGui for testing in Studio
+-- Zen Script - Full Screen with Loading Text
+if game:GetService("RunService"):IsStudio() then
+    print("This script is for executors only, not Roblox Studio!")
+    return
+end
 
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
--- Remove any existing GUI with same name to avoid duplicates
-local existing = playerGui:FindFirstChild("ZenLoadingScreen")
-if existing then existing:Destroy() end
-
--- Root ScreenGui
+-- Create GUI
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ZenLoadingScreen"
+screenGui.Name = "ZenScriptLoader"
+screenGui.DisplayOrder = 999
 screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.Parent = playerGui
 
--- Background (black, with subtle diagonal effect could be added via ImageLabel - keep simple)
-local bg = Instance.new("Frame")
-bg.Name = "Background"
-bg.AnchorPoint = Vector2.new(0.5, 0.5)
-bg.Position = UDim2.new(0.5, 0, 0.5, 0)
-bg.Size = UDim2.new(1, 0, 1, 0)
-bg.BackgroundColor3 = Color3.fromRGB(8,8,8)
-bg.BorderSizePixel = 0
-bg.Parent = screenGui
+-- Main Frame (pure black background - FULL SCREEN)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(1, 0, 1, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
 
--- Big Title: Zen Script
+-- Larger white dots background (covering entire screen including top)
+for i = 1, 100 do
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 2, 0, 2) -- Larger dots (2x2 pixels)
+    dot.Position = UDim2.new(math.random(), 0, math.random(), 0)
+    dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    dot.BorderSizePixel = 0
+    dot.BackgroundTransparency = 0.6
+    dot.Parent = mainFrame
+end
+
+-- Logo (Zen Script Logo - positioned at very top)
+local logo = Instance.new("ImageLabel")
+logo.Size = UDim2.new(0, 80, 0, 80)
+logo.Position = UDim2.new(0.5, -40, 0.05, 0) -- Very top position
+logo.BackgroundTransparency = 1
+logo.Image = "rbxassetid://YOUR_LOGO_IMAGE_ID_HERE" -- Replace with your logo ID
+logo.Parent = mainFrame
+
+-- Title "Zen Script" (BOLD and large - right below logo)
 local title = Instance.new("TextLabel")
-title.Name = "Title"
-title.AnchorPoint = Vector2.new(0.5, 0.45)
-title.Position = UDim2.new(0.5, 0, 0.35, 0)
-title.Size = UDim2.new(0.7, 0, 0.2, 0)
+title.Size = UDim2.new(1, 0, 0.15, 0)
+title.Position = UDim2.new(0, 0, 0.15, 0) -- Right below logo
 title.BackgroundTransparency = 1
 title.Text = "Zen Script"
-title.TextColor3 = Color3.fromRGB(255,255,255)
-title.TextScaled = true
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 32
 title.Font = Enum.Font.GothamBlack
-title.TextStrokeTransparency = 0.8
-title.Parent = bg
+title.TextStrokeTransparency = 0
+title.TextStrokeColor3 = Color3.fromRGB(50, 50, 50)
+title.Parent = mainFrame
 
--- Progress bar container (dark grey)
-local barContainer = Instance.new("Frame")
-barContainer.Name = "BarContainer"
-barContainer.AnchorPoint = Vector2.new(0.5, 0)
-barContainer.Position = UDim2.new(0.5, 0, 0.55, 0)
-barContainer.Size = UDim2.new(0.6, 0, 0.06, 0)
-barContainer.BackgroundColor3 = Color3.fromRGB(70,70,70)
-barContainer.BorderSizePixel = 0
-barContainer.Parent = bg
-barContainer.ClipsDescendants = true
-barContainer.Rotation = 0
-barContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+-- "Loading" text (below title)
+local loadingText = Instance.new("TextLabel")
+loadingText.Size = UDim2.new(1, 0, 0.1, 0)
+loadingText.Position = UDim2.new(0, 0, 0.28, 0)
+loadingText.BackgroundTransparency = 1
+loadingText.Text = "Loading"
+loadingText.TextColor3 = Color3.fromRGB(200, 200, 200)
+loadingText.TextSize = 20
+loadingText.Font = Enum.Font.Gotham
+loadingText.Parent = mainFrame
 
--- Blue fill (starts at 0 width, will tween to 99%)
-local fill = Instance.new("Frame")
-fill.Name = "Fill"
-fill.AnchorPoint = Vector2.new(0, 0.5)
-fill.Position = UDim2.new(0, 0, 0.5, 0)
-fill.Size = UDim2.new(0, 0, 0.9, 0) -- 90% of container height
-fill.BackgroundColor3 = Color3.fromRGB(29, 90, 255) -- bright blue
-fill.BorderSizePixel = 0
-fill.Parent = barContainer
-fill.LayoutOrder = 1
+-- Percentage (centered - LARGE like image)
+local percentText = Instance.new("TextLabel")
+percentText.Size = UDim2.new(1, 0, 0.15, 0)
+percentText.Position = UDim2.new(0, 0, 0.38, 0) -- Below loading text
+percentText.BackgroundTransparency = 1
+percentText.Text = "0%" -- Starts at 0%
+percentText.TextColor3 = Color3.fromRGB(255, 255, 255)
+percentText.TextSize = 28
+percentText.Font = Enum.Font.GothamBold
+percentText.Parent = mainFrame
 
--- Small left accent (thin vertical blue bar like in screenshot)
-local leftAccent = Instance.new("Frame")
-leftAccent.Name = "LeftAccent"
-leftAccent.AnchorPoint = Vector2.new(0, 0.5)
-leftAccent.Position = UDim2.new(0, 0, 0.5, 0)
-leftAccent.Size = UDim2.new(0, 6, 0.75, 0) -- 6 pixels wide
-leftAccent.BackgroundColor3 = Color3.fromRGB(29, 90, 255)
-leftAccent.BorderSizePixel = 0
-leftAccent.Parent = barContainer
+-- Progress Bar Background (proper thickness like image)
+local progressBg = Instance.new("Frame")
+progressBg.Size = UDim2.new(0.4, 0, 0.015, 0) -- Proper visible thickness
+progressBg.Position = UDim2.new(0.3, 0, 0.53, 0) -- Below percentage
+progressBg.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+progressBg.BorderSizePixel = 0
+progressBg.Parent = mainFrame
 
--- Percent text centered on the bar
-local percentLabel = Instance.new("TextLabel")
-percentLabel.Name = "Percent"
-percentLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-percentLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
-percentLabel.Size = UDim2.new(1, 0, 1, 0)
-percentLabel.BackgroundTransparency = 1
-percentLabel.Text = "0%"
-percentLabel.TextColor3 = Color3.fromRGB(255,255,255)
-percentLabel.TextScaled = true
-percentLabel.Font = Enum.Font.Gotham
-percentLabel.Parent = barContainer
+-- Progress Bar Fill (blue fill - starts at 0)
+local progressBar = Instance.new("Frame")
+progressBar.Size = UDim2.new(0, 0, 1, 0) -- Starts at 0 width
+progressBar.Position = UDim2.new(0, 0, 0, 0)
+progressBar.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+progressBar.BorderSizePixel = 0
+progressBar.Parent = progressBg
 
--- Subtitle below bar
-local subtitle = Instance.new("TextLabel")
-subtitle.Name = "Subtitle"
-subtitle.AnchorPoint = Vector2.new(0.5, 0)
-subtitle.Position = UDim2.new(0.5, 0, 0.65, 0)
-subtitle.Size = UDim2.new(0.6, 0, 0.07, 0)
-subtitle.BackgroundTransparency = 1
-subtitle.Text = "This may take up to 5 minutes to load."
-subtitle.TextColor3 = Color3.fromRGB(230,230,230)
-subtitle.TextScaled = true
-subtitle.Font = Enum.Font.Gotham
-subtitle.Parent = bg
+-- Bottom Text "This may take up to 5 minutes" (small at bottom)
+local bottomText = Instance.new("TextLabel")
+bottomText.Size = UDim2.new(1, 0, 0.1, 0)
+bottomText.Position = UDim2.new(0, 0, 0.85, 0)
+bottomText.BackgroundTransparency = 1
+bottomText.Text = "This may take up to 5 minutes"
+bottomText.TextColor3 = Color3.fromRGB(150, 150, 150)
+bottomText.TextSize = 14
+bottomText.Font = Enum.Font.Gotham
+bottomText.Parent = mainFrame
 
--- Make UI slightly responsive for smaller screens
-title.TextYAlignment = Enum.TextYAlignment.Center
-subtitle.TextYAlignment = Enum.TextYAlignment.Center
-percentLabel.TextYAlignment = Enum.TextYAlignment.Center
+-- Parent GUI
+screenGui.Parent = game:GetService("CoreGui")
 
--- Progress logic: Tween the fill's Size to 99% over 180 seconds and update percent text while tweening.
-local targetFraction = 0.99 -- 99%
-local duration = 180 -- seconds (3 minutes)
+print("Zen Script - Full Screen with Loading Text Started!")
+print("Starting from 0%...")
 
--- Tween the Fill Size (X scale) from 0 to targetFraction
-local goal = {}
-goal.Size = UDim2.new(targetFraction, 0, fill.Size.Y.Scale, 0)
+-- Small delay to ensure UI is fully visible at 0%
+wait(0.5)
 
-local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
-local tween = TweenService:Create(fill, tweenInfo, goal)
+-- Unpredictable progress function with guaranteed 3+ minute duration
+local function chaoticProgress()
+    local currentProgress = 0
+    local startTime = tick()
+    local minDuration = 180 -- 3 minutes minimum
+    local maxDuration = 300 -- 5 minutes maximum
+    
+    -- Ensure we start at 0% and it's visible
+    progressBar.Size = UDim2.new(0, 0, 1, 0)
+    percentText.Text = "0%"
+    
+    while currentProgress < 99 do
+        local elapsed = tick() - startTime
+        local timeLeft = minDuration - elapsed
+        
+        -- Calculate how much we can progress based on time remaining
+        local maxPossibleProgress = 99 - currentProgress
+        local timeBasedMax = (elapsed / minDuration) * 99
+        
+        -- Ensure we don't progress too fast
+        if currentProgress > timeBasedMax then
+            -- We're ahead of schedule, slow down
+            wait(math.random(20, 50) / 10) -- 2-5 second wait
+            continue
+        end
+        
+        local behavior = math.random(1, 20)
+        
+        if behavior <= 10 then
+            -- Very small progress (1-3%) - most common
+            local jump = math.random(1, 3)
+            currentProgress = math.min(currentProgress + jump, 99)
+            progressBar.Size = UDim2.new(currentProgress / 100, 0, 1, 0)
+            percentText.Text = currentProgress .. "%"
+            wait(math.random(20, 50) / 10) -- 2-5 second waits
+            
+        elseif behavior <= 15 then
+            -- Small progress (4-8%)
+            local jump = math.random(4, 8)
+            currentProgress = math.min(currentProgress + jump, 99)
+            progressBar.Size = UDim2.new(currentProgress / 100, 0, 1, 0)
+            percentText.Text = currentProgress .. "%"
+            wait(math.random(15, 35) / 10) -- 1.5-3.5 second waits
+            
+        elseif behavior <= 18 then
+            -- Medium progress (9-15%) but rare
+            local jump = math.random(9, 15)
+            currentProgress = math.min(currentProgress + jump, 99)
+            progressBar.Size = UDim2.new(currentProgress / 100, 0, 1, 0)
+            percentText.Text = currentProgress .. "%"
+            wait(math.random(10, 25) / 10) -- 1-2.5 second waits
+            
+        else
+            -- Go backwards (2-6%) - rare but happens
+            if currentProgress > 25 then
+                local drop = math.random(2, 6)
+                currentProgress = math.max(0, currentProgress - drop)
+                progressBar.Size = UDim2.new(currentProgress / 100, 0, 1, 0)
+                percentText.Text = currentProgress .. "%"
+                wait(3) -- Longer pause after setback
+            end
+        end
+        
+        -- Random long pauses (15% chance)
+        if math.random(1, 7) == 1 then
+            local longPause = math.random(40, 100) / 10 -- 4-10 seconds
+            wait(longPause)
+        end
+        
+        -- Force minimum 3 minute duration
+        if currentProgress >= 85 and elapsed < minDuration then
+            -- We're close to finish but need to wait for 3 minutes
+            local timeToWait = minDuration - elapsed
+            if timeToWait > 0 then
+                -- Crawl through the final percentages
+                local smallBump = math.random(1, 2)
+                currentProgress = math.min(currentProgress + smallBump, 99)
+                progressBar.Size = UDim2.new(currentProgress / 100, 0, 1, 0)
+                percentText.Text = currentProgress .. "%"
+                wait(math.random(30, 60) / 10) -- 3-6 second waits
+            end
+        end
+        
+        -- If we hit 3 minutes and aren't at 99%, jump to finish
+        if elapsed >= minDuration and currentProgress < 99 then
+            currentProgress = 99
+            progressBar.Size = UDim2.new(0.99, 0, 1, 0)
+            percentText.Text = "99%"
+            break
+        end
+    end
+    
+    local totalTime = tick() - startTime
+    progressBar.Size = UDim2.new(0.99, 0, 1, 0)
+    percentText.Text = "99%"
+    print("Zen Script Loading Complete - 99%")
+    print("Total time: " .. math.floor(totalTime) .. " seconds (" .. math.floor(totalTime/60) .. " minutes)")
+end
 
--- Run a loop to update percent text each frame to match the fill width.
-local RunService = game:GetService("RunService")
-local startTime = tick()
-local updating = true
-
-tween:Play()
-
-local connection
-connection = RunService.Heartbeat:Connect(function()
-	if not updating then
-		connection:Disconnect()
-		return
-	end
-
-	local elapsed = tick() - startTime
-	local progress = math.clamp(elapsed / duration, 0, 1)
-	local percentNum = math.floor(progress * targetFraction * 100 + 0.5) -- rounded
-	if percentNum > 99 then percentNum = 99 end
-	percentLabel.Text = tostring(percentNum) .. "%"
-
-	-- When elapsed reaches duration, stop at 99%
-	if elapsed >= duration then
-		updating = false
-		percentLabel.Text = "99%"
-		-- Ensure fill size precisely set
-		fill.Size = UDim2.new(targetFraction, 0, fill.Size.Y.Scale, 0)
-	end
-end)
-
--- Cleanup on leaving or respawn if desired
-player.CharacterRemoving:Connect(function()
-	screenGui:Destroy()
-end)
+-- Start the progress
+chaoticProgress()
